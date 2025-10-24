@@ -1,0 +1,88 @@
+{
+  "description": "Category icon configuration for help command",
+  "iconPath": "./category-icons/",
+  "defaultSize": "64x64",
+  "format": "png",
+  "categories": {
+    "extra_owner": {
+      "filename": "extra-owner.png",
+      "name": "Extra Owner",
+      "emoji": "👑",
+      "description": "Extra owner system commands",
+      "color": "#FFD700"
+    },
+    "quarantine": {
+      "filename": "quarantine.png",
+      "name": "Quarantine",
+      "emoji": "🔒",
+      "description": "Quarantine management commands",
+      "color": "#FF6B6B"
+    },
+    "roles": {
+      "filename": "roles.png",
+      "name": "Roles",
+      "emoji": "🎭",
+      "description": "Role management commands",
+      "color": "#9B59B6"
+    },
+    "voice": {
+      "filename": "voice.png",
+      "name": "Voice",
+      "emoji": "🎤",
+      "description": "Voice channel management",
+      "color": "#3498DB"
+    },
+    "channels": {
+      "filename": "channels.png",
+      "name": "Channels",
+      "emoji": "📺",
+      "description": "Channel management commands",
+      "color": "#1ABC9C"
+    },
+    "media": {
+      "filename": "media.png",
+      "name": "Media",
+      "emoji": "🎬",
+      "description": "Media and thread management",
+      "color": "#E74C3C"
+    },
+    "automod": {
+      "filename": "automod.png",
+      "name": "AutoMod",
+      "emoji": "🛡️",
+      "description": "Auto-moderation commands",
+      "color": "#2ECC71"
+    },
+    "protection": {
+      "filename": "protection.png",
+      "name": "Protection",
+      "emoji": "🔐",
+      "description": "Security and protection",
+      "color": "#E67E22"
+    },
+    "server": {
+      "filename": "server.png",
+      "name": "Server",
+      "emoji": "🏠",
+      "description": "Server management commands",
+      "color": "#34495E"
+    },
+    "utility": {
+      "filename": "utility.png",
+      "name": "Utility",
+      "emoji": "🔧",
+      "description": "Utility commands",
+      "color": "#95A5A6"
+    },
+    "developer": {
+      "filename": "developer.png",
+      "name": "Developer",
+      "emoji": "💻",
+      "description": "Developer information",
+      "color": "#2C3E50"
+    }
+  },
+  "usage": {
+    "example": "const iconConfig = require('./category-icons/icons-config.json'); const iconPath = iconConfig.iconPath + iconConfig.categories.roles.filename;"
+  }
+}
