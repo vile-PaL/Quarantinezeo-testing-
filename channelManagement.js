@@ -1298,6 +1298,16 @@ class ChannelManager {
             return true;
         }
 
+        // Check if a category with this name already exists to prevent duplicates
+        const existingCategory = message.guild.channels.cache.find(
+            channel => channel.type === 4 && channel.name.toLowerCase() === categoryName.toLowerCase()
+        );
+        
+        if (existingCategory) {
+            await message.reply(`❌ A category with the name "${categoryName}" already exists (ID: \`${existingCategory.id}\`).`);
+            return true;
+        }
+
         console.log(`Creating category: "${categoryName}" (${visibility})`);
 
         try {
@@ -1372,6 +1382,16 @@ class ChannelManager {
         // Validate channel name length (Discord limit is 100 characters)
         if (channelName.length > 100) {
             await message.reply('❌ Channel name must be 100 characters or less.');
+            return true;
+        }
+
+        // Check if a text channel with this name already exists to prevent duplicates
+        const existingChannel = message.guild.channels.cache.find(
+            channel => channel.type === 0 && channel.name === channelName
+        );
+        
+        if (existingChannel) {
+            await message.reply(`❌ A text channel with the name "${channelName}" already exists (${existingChannel}).`);
             return true;
         }
 
@@ -1693,6 +1713,16 @@ class ChannelManager {
         // Validate channel name length
         if (channelName.length > 100) {
             await message.reply('❌ Voice channel name must be 100 characters or less.');
+            return true;
+        }
+
+        // Check if a voice channel with this name already exists to prevent duplicates
+        const existingVoiceChannel = message.guild.channels.cache.find(
+            channel => channel.type === 2 && channel.name.toLowerCase() === channelName.toLowerCase()
+        );
+        
+        if (existingVoiceChannel) {
+            await message.reply(`❌ A voice channel with the name "${channelName}" already exists (ID: \`${existingVoiceChannel.id}\`).`);
             return true;
         }
 
