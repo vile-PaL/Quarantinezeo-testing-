@@ -85,6 +85,17 @@ const quarantineEvasionTracking = new Map(); // userId -> { originalQuarantineTi
 const whatsappAlertTracking = new Map(); // guildId -> { lastAlert: timestamp, alertQueue: [] }
 const WHATSAPP_COOLDOWN = 300000; // 5 minutes cooldown between WhatsApp alerts
 
+// ===== ANTI-SPAM SYSTEM =====
+// Command Cooldown System - Prevents command spamming
+const commandCooldowns = new Map(); // userId -> { commandName -> timestamp }
+const COMMAND_COOLDOWN_TIME = 3000; // 3 seconds cooldown per command
+const CHANNEL_CREATION_COOLDOWN = 5000; // 5 seconds for channel creation commands
+const GLOBAL_USER_COOLDOWN = 1000; // 1 second between any commands
+
+// Interaction Deduplication - Prevents double execution of slash commands
+const processedInteractions = new Set(); // Set of interaction IDs that have been processed
+const INTERACTION_TIMEOUT = 5000; // 5 seconds to clear processed interactions
+
 // Critical Security Alert Function with WhatsApp Integration (Anti-Spam)
 async function sendCriticalSecurityAlert(guild, alertType, details, violator = null) {
     try {
@@ -255,6 +266,92 @@ async function sendWhatsAppMessage(phoneNumber, message) {
         console.error('Error details:', error.message);
         return false;
     }
+}
+
+// ===== ANTI-SPAM COOLDOWN FUNCTIONS =====
+
+/**
+ * Check if a user is on cooldown for a specific command
+ * @param {string} userId - The user's ID
+ * @param {string} commandName - The command name
+ * @returns {Object} { onCooldown: boolean, remaining: number }
+ */
+function checkCooldown(userId, commandName) {
+    const now = Date.now();
+    
+    // Get user's cooldown data
+    if (!commandCooldowns.has(userId)) {
+        commandCooldowns.set(userId, new Map());
+    }
+    
+    const userCooldowns = commandCooldowns.get(userId);
+    
+    // Check if command is on cooldown
+    if (userCooldowns.has(commandName)) {
+        const expirationTime = userCooldowns.get(commandName);
+        
+        if (now < expirationTime) {
+            const remaining = Math.ceil((expirationTime - now) / 1000);
+            return { onCooldown: true, remaining };
+        }
+    }
+    
+    return { onCooldown: false, remaining: 0 };
+}
+
+/**
+ * Set cooldown for a user and command
+ * @param {string} userId - The user's ID
+ * @param {string} commandName - The command name
+ * @param {number} cooldownTime - Cooldown time in milliseconds (optional)
+ */
+function setCooldown(userId, commandName, cooldownTime = COMMAND_COOLDOWN_TIME) {
+    const now = Date.now();
+    
+    // Determine cooldown time based on command type
+    const channelCreationCommands = ['crcato', 'crchannel', 'crvc', 'delchannel', 'clone', 'nuke'];
+    const actualCooldown = channelCreationCommands.includes(commandName) 
+        ? CHANNEL_CREATION_COOLDOWN 
+        : cooldownTime;
+    
+    if (!commandCooldowns.has(userId)) {
+        commandCooldowns.set(userId, new Map());
+    }
+    
+    const userCooldowns = commandCooldowns.get(userId);
+    userCooldowns.set(commandName, now + actualCooldown);
+    
+    // Clean up expired cooldowns for this user
+    setTimeout(() => {
+        if (userCooldowns.has(commandName)) {
+            userCooldowns.delete(commandName);
+            if (userCooldowns.size === 0) {
+                commandCooldowns.delete(userId);
+            }
+        }
+    }, actualCooldown + 1000);
+}
+
+/**
+ * Check if an interaction has already been processed
+ * @param {string} interactionId - The interaction ID
+ * @returns {boolean} True if already processed
+ */
+function isInteractionProcessed(interactionId) {
+    return processedInteractions.has(interactionId);
+}
+
+/**
+ * Mark an interaction as processed
+ * @param {string} interactionId - The interaction ID
+ */
+function markInteractionProcessed(interactionId) {
+    processedInteractions.add(interactionId);
+    
+    // Auto-cleanup after timeout
+    setTimeout(() => {
+        processedInteractions.delete(interactionId);
+    }, INTERACTION_TIMEOUT);
 }
 
 // MAXIMUM SECURITY SETTINGS - ONLY OWNER AND BOT CAN MAKE CHANGES
@@ -4907,6 +5004,30 @@ client.on('interactionCreate', async interaction => {
     try {
         // Handle slash commands
         if (interaction.isChatInputCommand()) {
+            // ===== ANTI-SPAM: Interaction Deduplication =====
+            if (isInteractionProcessed(interaction.id)) {
+                console.log(`⚠️ Duplicate interaction detected: ${interaction.id} - Ignoring`);
+                return;
+            }
+            markInteractionProcessed(interaction.id);
+            
+            // ===== ANTI-SPAM: Cooldown Check for Slash Commands =====
+            const cooldownCheck = checkCooldown(interaction.user.id, interaction.commandName);
+            if (cooldownCheck.onCooldown) {
+                const cooldownEmbed = new EmbedBuilder()
+                    .setColor('#FF6B6B')
+                    .setTitle('⏱️ Cooldown Active')
+                    .setDescription(`Please wait **${cooldownCheck.remaining} second(s)** before using \`/${interaction.commandName}\` again.`)
+                    .setFooter({ text: 'Anti-Spam Protection' })
+                    .setTimestamp();
+                
+                await interaction.reply({ embeds: [cooldownEmbed], ephemeral: true });
+                return;
+            }
+            
+            // Set cooldown before executing command
+            setCooldown(interaction.user.id, interaction.commandName);
+            
             // Initialize slash command handler if not already initialized
             if (!slashCommandHandler) {
                 slashCommandHandler = new SlashCommandHandler(client, {
@@ -5116,6 +5237,26 @@ client.on('messageCreate', async message => {
     const args = message.content.slice(prefix.length).trim().split(/ +/);
     const command = args.shift().toLowerCase();
 
+    // ===== ANTI-SPAM: Command Cooldown Check =====
+    const cooldownCheck = checkCooldown(message.author.id, command);
+    if (cooldownCheck.onCooldown) {
+        const cooldownEmbed = new EmbedBuilder()
+            .setColor('#FF6B6B')
+            .setTitle('⏱️ Cooldown Active')
+            .setDescription(`Please wait **${cooldownCheck.remaining} second(s)** before using \`!${command}\` again.`)
+            .setFooter({ text: 'Anti-Spam Protection' })
+            .setTimestamp();
+        
+        const reply = await message.reply({ embeds: [cooldownEmbed] });
+        
+        // Auto-delete cooldown message after 5 seconds
+        setTimeout(() => {
+            reply.delete().catch(() => {});
+        }, 5000);
+        
+        return;
+    }
+
     // === ROLE MANAGEMENT COMMANDS ===
     
     // All role management commands
@@ -5143,6 +5284,9 @@ client.on('messageCreate', async message => {
         if (!isAuthorized(message)) {
             return message.reply('❌ You are not authorized to use role management commands. Use commands in owner channel or admin channel.');
         }
+        
+        // Set cooldown before executing command
+        setCooldown(message.author.id, command);
         
         try {
             await roleManager.handleCommand(message, command, args);
@@ -5194,6 +5338,9 @@ client.on('messageCreate', async message => {
         if (!isAuthorized(message)) {
             return message.reply('❌ You are not authorized to use channel management commands. Use commands in owner channel or admin channel.');
         }
+        
+        // Set cooldown before executing command
+        setCooldown(message.author.id, command);
         
         try {
             await channelManager.handleCommand(message, command, args);
