@@ -478,7 +478,9 @@ class RoleManager {
         let successCount = 0;
         let failCount = 0;
         const actionText = subCommand === 'sync' ? 'Synchronizing' : 'Adding';
-        const processingMessage = await message.reply(`⏳ Processing... ${actionText} ${role} permissions to ${channelsInCategory.size} channels in category **${category.name}**`);
+        
+        // Send initial processing message
+        const processingMessage = await message.reply(`⏳ Processing... ${actionText} ${role} permissions to ${channelsInCategory.size} channels in category **${category.name}**\n\n**Progress:** 0/${channelsInCategory.size} channels processed...`);
 
         if (subCommand === 'sync') {
             // SYNC mode: Copy category permissions to all channels
@@ -490,6 +492,7 @@ class RoleManager {
             }
 
             // Sync permissions from category to all channels
+            let processed = 0;
             for (const [channelId, channel] of channelsInCategory) {
                 try {
                     // Copy the exact permissions from category to channel
@@ -501,6 +504,16 @@ class RoleManager {
                 } catch (error) {
                     console.error(`Error syncing role permissions to ${channel.name}:`, error);
                     failCount++;
+                }
+                processed++;
+                
+                // Update progress every 5 channels or at the end
+                if (processed % 5 === 0 || processed === channelsInCategory.size) {
+                    try {
+                        await processingMessage.edit(`⏳ Processing... ${actionText} ${role} permissions to ${channelsInCategory.size} channels in category **${category.name}**\n\n**Progress:** ${processed}/${channelsInCategory.size} channels processed...`);
+                    } catch (err) {
+                        // Ignore rate limit errors on progress updates
+                    }
                 }
             }
 
@@ -524,6 +537,7 @@ class RoleManager {
             await this.sendLogMessage(message.guild, embed);
         } else {
             // ADD mode: Add basic permissions to all channels
+            let processed = 0;
             for (const [channelId, channel] of channelsInCategory) {
                 try {
                     await channel.permissionOverwrites.edit(role, {
@@ -535,6 +549,16 @@ class RoleManager {
                 } catch (error) {
                     console.error(`Error adding role permissions to ${channel.name}:`, error);
                     failCount++;
+                }
+                processed++;
+                
+                // Update progress every 5 channels or at the end
+                if (processed % 5 === 0 || processed === channelsInCategory.size) {
+                    try {
+                        await processingMessage.edit(`⏳ Processing... ${actionText} ${role} permissions to ${channelsInCategory.size} channels in category **${category.name}**\n\n**Progress:** ${processed}/${channelsInCategory.size} channels processed...`);
+                    } catch (err) {
+                        // Ignore rate limit errors on progress updates
+                    }
                 }
             }
 
