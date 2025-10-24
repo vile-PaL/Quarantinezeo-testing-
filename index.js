@@ -3841,27 +3841,27 @@ function createCategoryDropdown() {
                 .setLabel('Quarantine & Moderation')
                 .setDescription('User quarantine and basic moderation')
                 .setValue('category_quarantine')
-                .setEmoji('🚨'),
+                .setEmoji('🛡️'),
             new StringSelectMenuOptionBuilder()
                 .setLabel('Role Management')
                 .setDescription('Role and interim role management')
                 .setValue('category_roles')
-                .setEmoji('🎭'),
+                .setEmoji('🎁'),
             new StringSelectMenuOptionBuilder()
                 .setLabel('Voice Management')
                 .setDescription('Voice channel and voice state control')
                 .setValue('category_voice')
-                .setEmoji('🎤'),
+                .setEmoji('🎙️'),
             new StringSelectMenuOptionBuilder()
                 .setLabel('Channel Management')
                 .setDescription('Text and voice channel management')
                 .setValue('category_channels')
-                .setEmoji('📺'),
+                .setEmoji('💬'),
             new StringSelectMenuOptionBuilder()
                 .setLabel('Media & Threads')
                 .setDescription('Media channels and thread management')
                 .setValue('category_media')
-                .setEmoji('📸'),
+                .setEmoji('🎨'),
             new StringSelectMenuOptionBuilder()
                 .setLabel('Auto-Moderation')
                 .setDescription('Automated moderation and filters')
@@ -3871,7 +3871,7 @@ function createCategoryDropdown() {
                 .setLabel('Bot & User Protection')
                 .setDescription('Bot whitelist and user protection')
                 .setValue('category_protection')
-                .setEmoji('🛡️'),
+                .setEmoji('🔒'),
             new StringSelectMenuOptionBuilder()
                 .setLabel('Server Management')
                 .setDescription('Server protection and templates')
@@ -3886,7 +3886,7 @@ function createCategoryDropdown() {
                 .setLabel('Developer Information')
                 .setDescription('Bot developer and technical details')
                 .setValue('category_developer')
-                .setEmoji('💻')
+                .setEmoji('</>')
         ]);
 
     return new ActionRowBuilder().addComponents(categoryMenu);
@@ -3928,7 +3928,7 @@ function createCategoryEmbed(category) {
             break;
 
         case 'category_quarantine':
-            embed.setTitle('🚨 **Quarantine & Moderation**')
+            embed.setTitle('🛡️ **Quarantine & Moderation**')
                 .setDescription(`**Total Commands:** ${totalCommands} • **Owner/Admin Channel Only**\n\n` +
                     `**Quarantine User**\n` +
                     `\`qr @user [duration]\` - Quarantine user with custom duration\n` +
@@ -3954,7 +3954,7 @@ function createCategoryEmbed(category) {
             break;
 
         case 'category_roles':
-            embed.setTitle('🎭 **Role Management**')
+            embed.setTitle('🎁 **Role Management**')
                 .setDescription(`**Total Commands:** ${totalCommands} • **Owner/Admin Channel Only**\n\n` +
                     `**Basic Role Management**\n` +
                     `\`addrole @user @role\` - Add role to user\n` +
@@ -3983,7 +3983,7 @@ function createCategoryEmbed(category) {
             break;
 
         case 'category_voice':
-            embed.setTitle('🎤 **Voice Management**')
+            embed.setTitle('🎙️ **Voice Management**')
                 .setDescription(`**Total Commands:** ${totalCommands} • **Owner/Admin Channel Only**\n\n` +
                     `**Individual Voice Control**\n` +
                     `\`vmute @user\` - Voice mute user\n` +
@@ -4011,7 +4011,7 @@ function createCategoryEmbed(category) {
             break;
 
         case 'category_channels':
-            embed.setTitle('📺 **Channel Management**')
+            embed.setTitle('💬 **Channel Management**')
                 .setDescription(`**Total Commands:** ${totalCommands} • **Owner/Admin Channel Only**\n\n` +
                     `**Channel Creation & Deletion**\n` +
                     `\`crcato <name> <private|public>\` - Create category\n` +
@@ -4051,7 +4051,7 @@ function createCategoryEmbed(category) {
             break;
 
         case 'category_media':
-            embed.setTitle('📸 **Media & Threads Management**')
+            embed.setTitle('🎨 **Media & Threads Management**')
                 .setDescription(`**Total Commands:** ${totalCommands} • **Owner/Admin Channel Only**\n\n` +
                     `**Media Channel Management**\n` +
                     `\`enablemedia\` / \`mediachannel\` - Enable media-only mode\n` +
@@ -4099,7 +4099,7 @@ function createCategoryEmbed(category) {
             break;
 
         case 'category_protection':
-            embed.setTitle('🛡️ **Bot & User Protection**')
+            embed.setTitle('🔒 **Bot & User Protection**')
                 .setDescription(`**Total Commands:** ${totalCommands} • **Owner/Admin Channel Only**\n\n` +
                     `**Bot Whitelist Management**\n` +
                     `\`whitelist add <bot_id>\` - Add bot to whitelist\n` +
@@ -4198,7 +4198,7 @@ function createCategoryEmbed(category) {
             break;
 
         case 'category_developer':
-            embed.setTitle('💻 **Developer Information**')
+            embed.setTitle('</> **Developer Information**')
                 .setDescription(`**Total Commands:** ${totalCommands} • **Bot Created by script.agi**\n\n` +
                     `**ᯓᡣ𐭩 About the Developer**\n` +
                     `discord.gg/scriptspace was developed with love ᡣ𐭩 at scriptspace by **script.agi**\n\n` +
@@ -7999,11 +7999,23 @@ client.on('messageCreate', async message => {
         const reason = args.slice(2).join(' ') || 'No reason provided';
         let successCount = 0;
         let failCount = 0;
+        let notBannedCount = 0;
         const results = [];
 
         // Unban user in all servers where bot is present
         for (const guild of client.guilds.cache.values()) {
             try {
+                // First check if the user is actually banned in this server
+                const ban = await guild.bans.fetch(targetUserId).catch(() => null);
+                
+                if (!ban) {
+                    notBannedCount++;
+                    results.push(`⚪ ${guild.name}: Not banned`);
+                    console.log(`⚪ Global unban: ${targetUserId} was not banned in ${guild.name}`);
+                    continue;
+                }
+
+                // User is banned, now unban them
                 await guild.bans.remove(targetUserId, `GLOBAL UNBAN by ${message.author.username}: ${reason}`);
                 successCount++;
                 results.push(`✅ ${guild.name}`);
@@ -8012,22 +8024,25 @@ client.on('messageCreate', async message => {
             } catch (error) {
                 failCount++;
                 results.push(`❌ ${guild.name}: ${error.message}`);
+                console.error(`❌ Global unban failed in ${guild.name}:`, error);
             }
         }
 
         // Send results
         const resultEmbed = new EmbedBuilder()
-            .setColor('#00FF00')
+            .setColor(successCount > 0 ? '#00FF00' : '#FFA500')
             .setTitle('🔓 Global Unban Executed')
             .setDescription(`Global unban applied across all servers where the bot is present.`)
             .addFields(
                 { name: '🎯 Target User', value: targetUser ? `${targetUser.username} (\`${targetUserId}\`)` : `User ID: \`${targetUserId}\``, inline: true },
                 { name: '📝 Reason', value: reason.substring(0, 1024), inline: true },
                 { name: '👑 Executed By', value: `${message.author.username}`, inline: true },
-                { name: '📊 Success Rate', value: `${successCount}/${client.guilds.cache.size} servers`, inline: true },
+                { name: '✅ Successfully Unbanned', value: `${successCount} servers`, inline: true },
+                { name: '⚪ Not Banned', value: `${notBannedCount} servers`, inline: true },
                 { name: '❌ Failed', value: `${failCount} servers`, inline: true },
+                { name: '📊 Total Servers', value: `${client.guilds.cache.size} servers`, inline: true },
                 { name: '⏰ Executed At', value: `<t:${Math.floor(Date.now() / 1000)}:F>`, inline: true },
-                { name: '📋 Server Results', value: results.slice(0, 10).join('\n').substring(0, 1024) + (results.length > 10 ? `\n... and ${results.length - 10} more` : ''), inline: false }
+                { name: '📋 Server Results', value: results.slice(0, 15).join('\n').substring(0, 1024) + (results.length > 15 ? `\n... and ${results.length - 15} more` : ''), inline: false }
             )
             .setFooter({ text: 'Global Unban System - Bot Owner Only' })
             .setTimestamp();
