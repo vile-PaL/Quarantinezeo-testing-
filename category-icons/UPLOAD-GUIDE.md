@@ -1,8 +1,12 @@
 # 📤 How to Upload Custom Category Icons to GitHub
 
-## Quick Start Guide
+## ✨ Automatic Loading System - No Code Changes Needed!
 
-Follow these simple steps to upload your custom PNG icons to GitHub:
+The bot **automatically detects and uses** PNG files you upload. Just follow these simple steps:
+
+---
+
+## Quick Start Guide
 
 ### Step 1: Prepare Your Icons
 
@@ -50,26 +54,47 @@ git commit -m "Add custom category icons"
 git push origin main
 ```
 
-### Step 4: Using the Icons in Your Code
+### Step 4: Restart Your Bot
 
-Once uploaded, you can reference the icons in your bot code:
+**That's it!** The bot will automatically detect and use your icons.
+
+```bash
+# Check bot console for confirmation:
+✅ Category icons config loaded successfully
+```
+
+No code changes needed! The automatic icon loader handles everything.
+
+### Step 5: Test Your Icons
+
+1. Use the help command: `/help` or `!help`
+2. Select a category from the dropdown
+3. Your custom icon will appear as the thumbnail!
+
+---
+
+## How the Automatic System Works
+
+The bot uses `categoryIconsLoader.js` which:
+
+1. ✅ **Automatically detects** PNG files in the folder
+2. ✅ **Loads icons** when help commands are used
+3. ✅ **Falls back** to default bot avatar if PNG missing
+4. ✅ **Caches** for optimal performance
+5. ✅ **No manual configuration** required
+
+### Example: What Happens When You Upload
 
 ```javascript
-const fs = require('fs');
-const path = require('path');
-const { AttachmentBuilder } = require('discord.js');
-
-// Load a category icon
-const iconPath = path.join(__dirname, 'category-icons', 'extra-owner.png');
-const iconFile = new AttachmentBuilder(iconPath);
-
-// Use in embed
-const embed = new EmbedBuilder()
-    .setTitle('Extra Owner Commands')
-    .setThumbnail('attachment://extra-owner.png');
-
-await channel.send({ embeds: [embed], files: [iconFile] });
+// When you upload roles.png:
+// 1. Bot detects the file automatically
+// 2. When user opens "Roles" category in help:
+// 3. Bot loads roles.png from folder
+// 4. Displays it as thumbnail in embed
+// 5. If file missing → falls back to bot avatar
 ```
+
+**You don't need to write any code!** Just upload the PNG files.
 
 ## Alternative: Upload via Desktop Client
 

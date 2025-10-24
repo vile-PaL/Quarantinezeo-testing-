@@ -3895,15 +3895,27 @@ function createCategoryDropdown() {
 // Function to create category-specific embed
 function createCategoryEmbed(category) {
     const totalCommands = getTotalCommandsCount();
+    
+    // Map category to icon key and check if custom icon exists
+    const categoryKey = categoryIconsLoader.mapCategoryToKey(category);
+    const hasCustomIcon = categoryKey && categoryIconsLoader.iconExists(categoryKey);
+    
     let embed = new EmbedBuilder()
-        .setColor('#af7cd2')
+        .setColor(hasCustomIcon ? categoryIconsLoader.getCategoryColor(categoryKey) : '#af7cd2')
         .setAuthor({
             name: 'Quarantianizo made at discord.gg/scriptspace by script.agi',
             iconURL: 'https://cdn.discordapp.com/attachments/1377710452653424711/1410001205639254046/a964ff33-1eaf-49ed-b487-331b3ffe3ebd.gif'
         })
-        .setThumbnail(client.user.displayAvatarURL({ dynamic: true, size: 256 }))
         .setImage('https://cdn.discordapp.com/attachments/1377710452653424711/1410001205639254046/a964ff33-1eaf-49ed-b487-331b3ffe3ebd.gif')
         .setTimestamp();
+    
+    // Set thumbnail: use custom icon if available, otherwise use bot avatar
+    if (hasCustomIcon) {
+        const iconFilename = categoryIconsLoader.getAttachmentName(categoryKey);
+        embed.setThumbnail(`attachment://${iconFilename}`);
+    } else {
+        embed.setThumbnail(client.user.displayAvatarURL({ dynamic: true, size: 256 }));
+    }
 
     switch(category) {
         case 'category_extra_owner':
@@ -4251,7 +4263,16 @@ function createCategoryEmbed(category) {
                 .setDescription('Select a category from the dropdown menu below to view commands.');
     }
 
-    return embed;
+    // Return embed with attachment if custom icon exists
+    const result = { embed };
+    if (hasCustomIcon) {
+        const iconAttachment = categoryIconsLoader.getIconAttachment(categoryKey);
+        if (iconAttachment) {
+            result.file = iconAttachment;
+        }
+    }
+    
+    return result;
 }
 
 // Function to show help with slideshow functionality and category dropdown
@@ -5058,13 +5079,20 @@ client.on('interactionCreate', async interaction => {
             }
 
             const selectedCategory = interaction.values[0];
-            const categoryEmbed = createCategoryEmbed(selectedCategory);
+            const categoryData = createCategoryEmbed(selectedCategory);
             const categoryDropdown = createCategoryDropdown();
             
-            await interaction.update({
-                embeds: [categoryEmbed],
+            const updateData = {
+                embeds: [categoryData.embed],
                 components: [categoryDropdown]
-            });
+            };
+            
+            // Add file attachment if custom icon exists
+            if (categoryData.file) {
+                updateData.files = [categoryData.file];
+            }
+            
+            await interaction.update(updateData);
             return;
         }
 
@@ -5883,6 +5911,9 @@ client.on('voiceStateUpdate', async (oldState, newState) => {
 
 // Import command registration
 const { registerCommands } = require('./commands');
+
+// Import category icons loader
+const categoryIconsLoader = require('./categoryIconsLoader');
 
 client.once('ready', async () => {
     console.log(`Logged in as ${client.user.tag}!`);
@@ -7503,13 +7534,20 @@ client.on('interactionCreate', async interaction => {
         // Handle category dropdown selection
         if (interaction.customId === 'help_category_select') {
             const selectedCategory = interaction.values[0];
-            const categoryEmbed = createCategoryEmbed(selectedCategory);
+            const categoryData = createCategoryEmbed(selectedCategory);
+            
+            const replyData = {
+                embeds: [categoryData.embed], 
+                ephemeral: true 
+            };
+            
+            // Add file attachment if custom icon exists
+            if (categoryData.file) {
+                replyData.files = [categoryData.file];
+            }
             
             // Send category embed as ephemeral message (only visible to user)
-            await interaction.reply({ 
-                embeds: [categoryEmbed], 
-                ephemeral: true 
-            });
+            await interaction.reply(replyData);
             return;
         }
 
